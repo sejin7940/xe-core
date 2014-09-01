@@ -1496,7 +1496,7 @@ class memberAdminController extends member
 		// 쪽지 삭제 
 		$args_message->sender_srl = $obj->member_srl;
 		$args_message->receiver_srl = $obj->member_srl;
-		$output_message = executeQuery('member.deleteMessagesMember', $args_message);
+		$output_message = executeQuery('communication.deleteMessagesMember', $args_message);
 		
 		// 회원정보 삭제
 		$oMemberController = &getController('member');   
