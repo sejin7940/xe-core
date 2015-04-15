@@ -3467,6 +3467,13 @@
 			<value xml:lang="vi"><![CDATA[Ngày(yyyy/mm/dd)]]></value>
 			<value xml:lang="mn"><![CDATA[Онсар (Жил сар өдөр)]]></value>
 		</item>
+		<item name="datetime">
+			<value xml:lang="ko"><![CDATA[날짜시간(연월일시분초)]]></value>
+			<value xml:lang="en"><![CDATA[date(yyyy/mm/dd/hh/ii/ss)]]></value>
+			<value xml:lang="jp"><![CDATA[日付(年月日時分秒)]]></value>
+			<value xml:lang="zh-CN"><![CDATA[日期(年月日時分秒)]]></value>
+			<value xml:lang="zh-TW"><![CDATA[日期(年月日時分秒)]]></value>
+		</item>
 	</item>
 	<item name="column_name">
 		<value xml:lang="ko"><![CDATA[입력항목 이름]]></value>
