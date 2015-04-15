@@ -304,7 +304,10 @@ class ExtraItem
 				
 			case 'date' :
 				return zdate($value, "Y-m-d");
-
+			
+			case 'datetime' :
+				return zdate($value, "Y-m-d H:i:s");
+	
 			case 'checkbox' :
 			case 'select' :
 			case 'radio' :
@@ -440,6 +443,30 @@ class ExtraItem
 				$buff[] = '//]]>';
 				$buff[] = '</script>';
 				break;
+			// datetime
+			case 'datetime' : 
+				Context::loadJavascriptPlugin('ui.datetimepicker');
+				 
+				$buff[] = '<input type="hidden" name="' . $column_name . '" value="' . $value . '" />'; 
+				$buff[] = '<input type="text" id="date_' . $column_name . '" value="' . zdate($value, 'Y-m-d H:i:s') . '" class="date" />';
+				$buff[] = '<input type="button" value="' . Context::getLang('cmd_delete') . '" class="btn" id="dateRemover_' . $column_name . '" />';
+				$buff[] = '<script type="text/javascript">';
+				$buff[] = '//<![CDATA[';
+				$buff[] = '(function($){';
+				$buff[] = '$(function(){';
+				$buff[] = '  var option = { timeFormat: "HH:mm:ss", onSelect:function(){';
+				$buff[] = '    $(this).prev(\'input[type="hidden"]\').val(this.value.replace(/\D/g,""))}';
+				$buff[] = '  };';
+				$buff[] = '  $("#date_' . $column_name . '").datetimepicker(option);';
+				$buff[] = '  $("#dateRemover_' . $column_name . '").click(function(){';
+				$buff[] = '    $(this).siblings("input").val("");';
+				$buff[] = '    return false;';
+				$buff[] = '  })';
+				$buff[] = '});';
+				$buff[] = '})(jQuery);';
+				$buff[] = '//]]>';
+				$buff[] = '</script>';
+				break;				
 			// address
 			case "kr_zip" :
 				if(($oKrzipModel = getModel('krzip')) && method_exists($oKrzipModel , 'getKrzipCodeSearchHtml' ))
