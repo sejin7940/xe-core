@@ -84,10 +84,6 @@ class DisplayHandler extends Handler
 		}
 
 		// header output
-		if($this->gz_enabled)
-		{
-			header("Content-Encoding: gzip");
-		}
 
 		$httpStatusCode = $oModule->getHttpStatusCode();
 		if($httpStatusCode && $httpStatusCode != 200)
@@ -114,9 +110,17 @@ class DisplayHandler extends Handler
 		$this->content_size = strlen($output);
 		$output .= $this->_debugOutput();
 
+		// disable gzip if output already exists
+		ob_flush();
+		if(headers_sent())
+		{
+			$this->gz_enabled = FALSE;
+		}
+
 		// results directly output
 		if($this->gz_enabled)
 		{
+			header("Content-Encoding: gzip");
 			print ob_gzhandler($output, 5);
 		}
 		else
@@ -126,6 +130,8 @@ class DisplayHandler extends Handler
 
 		// call a trigger after display
 		ModuleHandler::triggerCall('display', 'after', $output);
+
+		flushSlowlog();
 	}
 
 	/**
@@ -292,7 +298,7 @@ class DisplayHandler extends Handler
 					$buff = 'The IP address is not allowed. Change the value of __DEBUG_PROTECT_IP__ into your IP address in config/config.user.inc.php or config/config.inc.php';
 				}
 
-				return "<!--\r\n" . implode("\r\n", $buff) . "\r\n-->";
+				return "<!--\r\n" . $buff . "\r\n-->";
 			}
 
 			// Output to a file
