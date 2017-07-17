@@ -112,7 +112,7 @@ class adminAdminModel extends admin
 		$connection = ftp_connect($ftp_info->ftp_host, $ftp_info->ftp_port);
 		if(!$connection)
 		{
-			return new Object(-1, sprintf(Context::getLang('msg_ftp_not_connected'), $ftp_host));
+			return new Object(-1, sprintf(Context::getLang('msg_ftp_not_connected'), 'host'));
 		}
 
 		$login_result = @ftp_login($connection, $ftp_info->ftp_user, $ftp_info->ftp_password);
@@ -217,7 +217,7 @@ class adminAdminModel extends admin
 		$oFTP = new ftp();
 		if(!$oFTP->ftp_connect($ftp_info->ftp_host, $ftp_info->ftp_port))
 		{
-			return new Object(1, sprintf(Context::getLang('msg_ftp_not_connected'), $ftp_info->ftp_host));
+			return new Object(1, sprintf(Context::getLang('msg_ftp_not_connected'), 'host'));
 		}
 
 		if(!$oFTP->ftp_login($ftp_info->ftp_user, $ftp_info->ftp_password))
@@ -962,7 +962,8 @@ class adminAdminModel extends admin
         elseif($file_exsit)
 		{
 			$default_url = Context::getDefaultUrl();
-			$icon_url = $default_url . 'files/attach/xeicon/' . $virtual_site . $iconname;
+			if($default_url && substr_compare($default_url, '/', -1) === 0) $default_url = substr($default_url, 0, -1);
+			$icon_url = $default_url . '/files/attach/xeicon/' . $virtual_site . $iconname;
 		}
 		return $icon_url;
 	}

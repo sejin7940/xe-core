@@ -46,6 +46,12 @@ class fileController extends file
 
 		$output = $this->insertFile($file_info, $module_srl, $upload_target_srl);
 		Context::setResponseMethod('JSON');
+		$this->add('file_srl',$output->get('file_srl'));
+		$this->add('file_size',$output->get('file_size'));
+		$this->add('direct_download',$output->get('direct_download'));
+		$this->add('source_filename',$output->get('source_filename'));
+		$this->add('download_url',$output->get('uploaded_filename'));
+		$this->add('upload_target_srl',$output->get('upload_target_srl'));
 		if($output->error != '0') $this->stop($output->message);
 	}
 
@@ -69,9 +75,20 @@ class fileController extends file
 		if(!$upload_target_srl) $upload_target_srl = $_SESSION['upload_info'][$editor_sequence]->upload_target_srl;
 		// Create if upload_target_srl is not defined in the session information
 		if(!$upload_target_srl) $_SESSION['upload_info'][$editor_sequence]->upload_target_srl = $upload_target_srl = getNextSequence();
+
 		// Delete and then attempt to re-upload if file_srl is requested
 		$file_srl = Context::get('file_srl');
-		if($file_srl) $this->deleteFile($file_srl);
+		if($file_srl)
+		{
+			$oFileModel = getModel('file');
+			$logged_info = Context::get('logged_info');
+			$file_info = $oFileModel->getFile($file_srl);
+			$file_grant = $oFileModel->getFileGrant($file_info, $logged_info);
+			if($file_info->file_srl == $file_srl && $file_grant->is_deletable)
+			{
+				$this->deleteFile($file_srl);
+			}
+		}
 
 		$file_info = Context::get('Filedata');
 		// An error appears if not a normally uploaded file
@@ -421,6 +438,15 @@ class fileController extends file
 	function procFileGetList()
 	{
 		if(!Context::get('is_logged')) return new Object(-1,'msg_not_permitted');
+
+		$oModuleModel = getModel('module');
+
+		$logged_info = Context::get('logged_info');
+		if($logged_info->is_admin !== 'Y' && !$oModuleModel->isSiteAdmin($logged_info))
+		{
+			return new Object(-1, 'msg_not_permitted');
+		}
+
 		$fileSrls = Context::get('file_srls');
 		if($fileSrls) $fileSrlList = explode(',', $fileSrls);
 
@@ -929,7 +955,7 @@ class fileController extends file
 			$file_info = $file_list[$i];
 			$old_file = $file_info->uploaded_filename;
 			// Determine the file path by checking if the file is an image or other kinds
-			if(preg_match("/\.(jpg|jpeg|gif|png|wmv|wma|mpg|mpeg|avi|swf|flv|mp1|mp2|mp3|mp4|asf|wav|asx|mid|midi|asf|mov|moov|qt|rm|ram|ra|rmm|m4v)$/i", $file_info->source_filename))
+			if(preg_match("/\.(asf|asf|asx|avi|flv|gif|jpeg|jpg|m4a|m4v|mid|midi|moov|mov|mp1|mp2|mp3|mp4|mpeg|mpg|ogg|png|qt|ra|ram|rm|rmm|swf|wav|webm|webp|wma|wmv)$/i", $file_info->source_filename))
 			{
 				$path = sprintf("./files/attach/images/%s/%s/", $target_module_srl,$target_srl);
 				$new_file = $path.$file_info->source_filename;
@@ -978,24 +1004,31 @@ class fileController extends file
 
 		$oDB = &DB::getInstance();
 		$oDB->begin();
-
+		
 		$args->cover_image = 'N';
 		$output = executeQuery('file.updateClearCoverImage', $args);
 		if(!$output->toBool())
 		{
-			$oDB->rollback();
-			return $output;
+				$oDB->rollback();
+				return $output;
 		}
 
-		$args->cover_image = 'Y';
-		$output = executeQuery('file.updateCoverImage', $args);
-		if(!$output->toBool())
+		if($file_info->cover_image != 'Y')
 		{
-			$oDB->rollback();
-			return $output;
+
+			$args->cover_image = 'Y';
+			$output = executeQuery('file.updateCoverImage', $args);
+			if(!$output->toBool())
+			{
+				$oDB->rollback();
+				return $output;
+			}
+
 		}
 
 		$oDB->commit();
+
+		$this->add('is_cover',$args->cover_image);
 
 		// 썸네일 삭제
 		$thumbnail_path = sprintf('files/thumbnails/%s', getNumberingPath($upload_target_srl, 3));

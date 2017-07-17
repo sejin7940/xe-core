@@ -124,6 +124,8 @@ class memberController extends member
 	 */
 	function procMemberScrapDocument()
 	{
+		$oModuleModel = &getModel('module');
+
 		// Check login information
 		if(!Context::get('is_logged')) return new Object(-1, 'msg_not_logged');
 		$logged_info = Context::get('logged_info');
@@ -131,9 +133,23 @@ class memberController extends member
 		$document_srl = (int)Context::get('document_srl');
 		if(!$document_srl) $document_srl = (int)Context::get('target_srl');
 		if(!$document_srl) return new Object(-1,'msg_invalid_request');
+
 		// Get document
 		$oDocumentModel = getModel('document');
 		$oDocument = $oDocumentModel->getDocument($document_srl);
+
+		if($oDocument->isSecret() && !$oDocument->isGranted())
+		{
+			return new Object(-1, 'msg_is_secret');
+		}
+
+		// 모듈 권한 확인
+		$grant = $oModuleModel->getGrant($oModuleModel->getModuleInfoByModuleSrl($oDocument->get('module_srl')), $logged_info);
+		if(!$grant->access)
+		{
+			return new Object(-1, 'msg_not_permitted');
+		}
+
 		// Variables
 		$args = new stdClass();
 		$args->document_srl = $document_srl;
@@ -143,9 +159,11 @@ class memberController extends member
 		$args->nick_name = $oDocument->get('nick_name');
 		$args->target_member_srl = $oDocument->get('member_srl');
 		$args->title = $oDocument->get('title');
+
 		// Check if already scrapped
 		$output = executeQuery('member.getScrapDocument', $args);
 		if($output->data->count) return new Object(-1, 'msg_alreay_scrapped');
+
 		// Insert
 		$output = executeQuery('member.addScrapDocument', $args);
 		if(!$output->toBool()) return $output;
@@ -197,9 +215,22 @@ class memberController extends member
 
 		$document_srl = (int)Context::get('document_srl');
 		if(!$document_srl) return new Object(-1,'msg_invalid_request');
-		// Variables
+
+		$oDocumentModel = getModel('document');
+		$oDocument = $oDocumentModel->getDocument($document_srl);
+		if ($oDocument->get('member_srl') != $logged_info->member_srl)
+		{
+			return new Object(-1,'msg_invalid_request');
+		}
+
+		$configStatusList = $oDocumentModel->getStatusList();
+		if ($oDocument->get('status') != $configStatusList['temp'])
+		{
+			return new Object(-1,'msg_invalid_request');
+		}
+
 		$oDocumentController = getController('document');
-		$oDocumentController->deleteDocument($document_srl, true);
+		$oDocumentController->deleteDocument($document_srl);
 	}
 
 	/**
@@ -448,7 +479,7 @@ class memberController extends member
 			// Get information of logged-in user
 			$logged_info = Context::get('logged_info');
 			$member_srl = $logged_info->member_srl;
-			
+
 			$columnList = array('member_srl', 'password');
 			$memberInfo = $oMemberModel->getMemberInfoByMemberSrl($member_srl, 0, $columnList);
 			$this->memberInfo->password = $memberInfo->password;
@@ -491,7 +522,7 @@ class memberController extends member
 		unset($_SESSION['rechecked_password_step']);
 
 		// Extract the necessary information in advance
-		$oMemberModel = &getModel ('member');
+		$oMemberModel = getModel('member');
 		$config = $oMemberModel->getMemberConfig ();
 		$getVars = array('find_account_answer','allow_mailing','allow_message');
 		if($config->signupForm)
@@ -1211,7 +1242,7 @@ class memberController extends member
 		$renewal_args = new stdClass;
 		$renewal_args->member_srl = $member_info->member_srl;
 		$renewal_args->auth_key = $auth_info->auth_key;
-		$output = executeQuery('member.updateAuthMail', $renewal_args);		
+		$output = executeQuery('member.updateAuthMail', $renewal_args);
 
 		$memberInfo = array();
 		global $lang;
@@ -1470,7 +1501,7 @@ class memberController extends member
 		$signature = trim(removeHackTag($signature));
 		$signature = preg_replace('/<(\/?)(embed|object|param)/is', '&lt;$1$2', $signature);
 
-		$check_signature = trim(str_replace(array('&nbsp;',"\n","\r"),'',strip_tags($signature,'<img><object>')));
+		$check_signature = trim(str_replace(array('&nbsp;',"\n","\r"), '', strip_tags($signature, '<img><object>')));
 		$path = sprintf('files/member_extra_info/signature/%s/', getNumberingPath($member_srl));
 		$filename = sprintf('%s%d.signature.php', $path, $member_srl);
 
@@ -1576,7 +1607,7 @@ class memberController extends member
 		// If no information exists, delete a cookie
 		if(!$output->toBool() || !$output->data)
 		{
-			setCookie('xeak',null,$_SERVER['REQUEST_TIME']+60*60*24*365, '/');
+			setCookie('xeak',null,$_SERVER['REQUEST_TIME']+60*60*24*365);
 			return;
 		}
 
@@ -1588,7 +1619,7 @@ class memberController extends member
 
 		if(!$user_id || !$password)
 		{
-			setCookie('xeak',null,$_SERVER['REQUEST_TIME']+60*60*24*365, '/');
+			setCookie('xeak',null,$_SERVER['REQUEST_TIME']+60*60*24*365);
 			return;
 		}
 
@@ -1638,7 +1669,7 @@ class memberController extends member
 		else
 		{
 			executeQuery('member.deleteAutologin', $args);
-			setCookie('xeak',null,$_SERVER['REQUEST_TIME']+60*60*24*365, '/');
+			setCookie('xeak',null,$_SERVER['REQUEST_TIME']+60*60*24*365);
 		}
 	}
 
@@ -1792,7 +1823,7 @@ class memberController extends member
 			$autologin_args->member_srl = $this->memberInfo->member_srl;
 			executeQuery('member.deleteAutologin', $autologin_args);
 			$autologin_output = executeQuery('member.insertAutologin', $autologin_args);
-			if($autologin_output->toBool()) setCookie('xeak',$autologin_args->autologin_key, $_SERVER['REQUEST_TIME']+31536000, '/');
+			if($autologin_output->toBool()) setCookie('xeak',$autologin_args->autologin_key, $_SERVER['REQUEST_TIME']+31536000);
 		}
 		if($this->memberInfo->is_admin == 'Y')
 		{
@@ -1836,7 +1867,7 @@ class memberController extends member
 		$_SESSION['ipaddress'] = $_SERVER['REMOTE_ADDR'];
 		$_SESSION['member_srl'] = $this->memberInfo->member_srl;
 		$_SESSION['is_admin'] = '';
-		setcookie('xe_logged', 'true', 0, '/');
+		setcookie('xe_logged', 'true');
 		// Do not save your password in the session jiwojum;;
 		//unset($this->memberInfo->password);
 		// User Group Settings
@@ -1922,7 +1953,7 @@ class memberController extends member
 		// Control of essential parameters
 		if($args->allow_mailing!='Y') $args->allow_mailing = 'N';
 		if($args->denied!='Y') $args->denied = 'N';
-		$args->allow_message= 'Y';
+		if(!$args->allow_message || ($args->allow_message && !in_array($args->allow_message, array('Y','N','F')))) $args->allow_message = 'Y';
 
 		if($logged_info->is_admin == 'Y')
 		{
@@ -2205,11 +2236,11 @@ class memberController extends member
 		{
 			$args->password = $orgMemberInfo->password;
 		}
-		
+
 		if(!$args->user_name) $args->user_name = $orgMemberInfo->user_name;
 		if(!$args->user_id) $args->user_id = $orgMemberInfo->user_id;
 		if(!$args->nick_name) $args->nick_name = $orgMemberInfo->nick_name;
-		if(!$args->description) $args->description = '';
+		if(!$args->description) $args->description = $orgMemberInfo->description;
 		if(!$args->birthday) $args->birthday = '';
 
 		$output = executeQuery('member.updateMember', $args);
@@ -2404,10 +2435,10 @@ class memberController extends member
 		}
 
 		session_destroy();
-		setcookie(session_name(), '', $_SERVER['REQUEST_TIME']-42000, '/');
-		setcookie('sso','',$_SERVER['REQUEST_TIME']-42000, '/');
-		setcookie('xeak','',$_SERVER['REQUEST_TIME']-42000, '/');
-		setcookie('xe_logged', 'false', $_SERVER['REQUEST_TIME'] - 42000, '/');
+		setcookie(session_name(), '', $_SERVER['REQUEST_TIME']-42000);
+		setcookie('sso','',$_SERVER['REQUEST_TIME']-42000);
+		setcookie('xeak','',$_SERVER['REQUEST_TIME']-42000);
+		setcookie('xe_logged', 'false', $_SERVER['REQUEST_TIME'] - 42000);
 
 		if($memberSrl || $_COOKIE['xeak'])
 		{

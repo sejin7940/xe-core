@@ -33,12 +33,45 @@ class fileModel extends file
 
 		if($upload_target_srl)
 		{
-			$tmp_files = $this->getFiles($upload_target_srl);
-			$file_count = count($tmp_files);
+			$oDocumentModel = getModel('document');
+			$oCommentModel = getModel('comment');
+			$logged_info = Context::get('logged_info');
 
-			for($i=0;$i<$file_count;$i++)
+			$oDocument = $oDocumentModel->getDocument($upload_target_srl);
+
+			// comment 권한 확인
+			if(!$oDocument->isExists())
 			{
-				$file_info = $tmp_files[$i];
+				$oComment = $oCommentModel->getComment($upload_target_srl);
+				if($oComment->isExists() && $oComment->isSecret() && !$oComment->isGranted())
+				{
+					return new Object(-1, 'msg_not_permitted');
+				}
+
+				$oDocument = $oDocumentModel->getDocument($oComment->get('document_srl'));
+			}
+
+			// document 권한 확인
+			if($oDocument->isExists() && $oDocument->isSecret() && !$oDocument->isGranted())
+			{
+				return new Object(-1, 'msg_not_permitted');
+			}
+
+			// 모듈 권한 확인
+			if($oDocument->isExists())
+			{
+				$grant = $oModuleModel->getGrant($oModuleModel->getModuleInfoByModuleSrl($oDocument->get('module_srl')), $logged_info);
+				if(!$grant->access)
+				{
+					return new Object(-1, 'msg_not_permitted');
+				}
+			}
+
+			$tmp_files = $this->getFiles($upload_target_srl);
+			if(!$tmp_files) $tmp_files = array();
+
+			foreach($tmp_files as $file_info)
+			{
 				if(!$file_info->file_srl) continue;
 
 				$obj = new stdClass;
@@ -223,21 +256,18 @@ class fileModel extends file
 		$args->upload_target_srl = $upload_target_srl;
 		$args->sort_index = $sortIndex;
 		if($ckValid) $args->isvalid = 'Y';
-		$output = executeQuery('file.getFiles', $args, $columnList);
+		$output = executeQueryArray('file.getFiles', $args, $columnList);
 		if(!$output->data) return;
 
 		$file_list = $output->data;
 
 		if($file_list && !is_array($file_list)) $file_list = array($file_list);
 
-		$file_count = count($file_list);
-		for($i=0;$i<$file_count;$i++)
+		foreach ($file_list as &$file)
 		{
-			$file = $file_list[$i];
 			$file->source_filename = stripslashes($file->source_filename);
 			$file->source_filename = htmlspecialchars($file->source_filename);
 			$file->download_url = $this->getDownloadUrl($file->file_srl, $file->sid, $file->module_srl);
-			$file_list[$i] = $file;
 		}
 
 		return $file_list;

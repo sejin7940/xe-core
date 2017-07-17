@@ -1005,7 +1005,7 @@ class memberModel extends member
 			if(file_exists($filename))
 			{
 				$buff = FileHandler::readFile($filename);
-				$signature = preg_replace('/<\?.*\?>/', '', $buff);
+				$signature = preg_replace('/<\?.*?\?>/', '', $buff);
 				$GLOBALS['__member_info__']['signature'][$member_srl] = $signature;
 			}
 			else $GLOBALS['__member_info__']['signature'][$member_srl] = null;

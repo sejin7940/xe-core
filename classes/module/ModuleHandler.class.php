@@ -218,26 +218,26 @@ class ModuleHandler extends Handler
 
 		// if success_return_url and error_return_url is incorrect
 		$urls = array(Context::get('success_return_url'), Context::get('error_return_url'));
+		$dbInfo = Context::getDBInfo();
+		$defaultUrlInfo = parse_url($dbInfo->default_url);
+		$defaultHost = $defaultUrlInfo['host'];
+
 		foreach($urls as $url)
 		{
 			if(empty($url))
 			{
 				continue;
 			}
-		
+
 			$urlInfo = parse_url($url);
 			$host = $urlInfo['host'];
-		
-			$dbInfo = Context::getDBInfo();
-			$defaultUrlInfo = parse_url($dbInfo->default_url);
-			$defaultHost = $defaultUrlInfo['host'];
-		
+
 			if($host && ($host != $defaultHost && $host != $site_module_info->domain))
 			{
 				throw new Exception('msg_default_url_is_null');
 			}
 		}
-		
+
 		if(!$this->document_srl && $this->mid && $this->entry)
 		{
 			$oDocumentModel = getModel('document');
@@ -251,7 +251,7 @@ class ModuleHandler extends Handler
 		// Get module's information based on document_srl, if it's specified
 		if($this->document_srl)
 		{
-			
+
 			$module_info = $oModuleModel->getModuleInfoByDocumentSrl($this->document_srl);
 			// If the document does not exist, remove document_srl
 			if(!$module_info)
@@ -264,7 +264,7 @@ class ModuleHandler extends Handler
 				// if mids are not matching, set it as the document's mid
 				if(!$this->mid || ($this->mid != $module_info->mid))
 				{
-					
+
 					if(Context::getRequestMethod() == 'GET')
 					{
 						$this->mid = $module_info->mid;
@@ -276,7 +276,7 @@ class ModuleHandler extends Handler
 						$this->mid = $module_info->mid;
 						Context::set('mid', $this->mid);
 					}
-					
+
 				}
 				// if requested module is different from one of the document, remove the module information retrieved based on the document number
 				if($this->module && $module_info->module != $this->module)
@@ -391,7 +391,7 @@ class ModuleHandler extends Handler
 		{
 			Context::set('mid', $this->mid, TRUE);
 		}
-		
+
 		// Call a trigger after moduleHandler init
 		$output = ModuleHandler::triggerCall('moduleHandler.init', 'after', $this->module_info);
 		if(!$output->toBool())
@@ -507,8 +507,10 @@ class ModuleHandler extends Handler
 
 		$logged_info = Context::get('logged_info');
 
-		// check CSRF for POST actions
-		if($_SERVER['REQUEST_METHOD'] !== 'GET' && Context::isInstalled() && $this->act !== 'procFileUpload' && !checkCSRF()) {
+		// check CSRF for non-GET actions
+		$use_check_csrf = isset($xml_info->action->{$this->act}) && $xml_info->action->{$this->act}->check_csrf !== 'false';
+		if($use_check_csrf && $_SERVER['REQUEST_METHOD'] !== 'GET' && Context::isInstalled() && !checkCSRF())
+		{
 			$this->error = 'msg_invalid_request';
 			$oMessageObject = ModuleHandler::getModuleInstance('message', $display_mode);
 			$oMessageObject->setError(-1);
@@ -623,6 +625,18 @@ class ModuleHandler extends Handler
 				$orig_module = $oModule;
 
 				$xml_info = $oModuleModel->getModuleActionXml($forward->module);
+
+				// check CSRF for non-GET actions
+				$use_check_csrf = isset($xml_info->action->{$this->act}) && $xml_info->action->{$this->act}->check_csrf !== 'false';
+				if($use_check_csrf && $_SERVER['REQUEST_METHOD'] !== 'GET' && Context::isInstalled() && !checkCSRF())
+				{
+					$this->error = 'msg_invalid_request';
+					$oMessageObject = ModuleHandler::getModuleInstance('message', $display_mode);
+					$oMessageObject->setError(-1);
+					$oMessageObject->setMessage($this->error);
+					$oMessageObject->dispMessage();
+					return $oMessageObject;
+				}
 
 				// SECISSUE also check foward act method
 				// check REQUEST_METHOD in controller
@@ -1278,7 +1292,7 @@ class ModuleHandler extends Handler
 		{
 			return new Object();
 		}
-		
+
 		//store before trigger call time
 		$before_trigger_time = NULL;
 		if(__LOG_SLOW_TRIGGER__> 0)
