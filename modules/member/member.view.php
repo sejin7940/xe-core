@@ -343,6 +343,9 @@ class memberView extends member
 		$oDocumentAdminView = getAdminView('document');
 		$oDocumentAdminView->dispDocumentAdminList();
 
+		$oSecurity = new Security();
+		$oSecurity->encodeHTML('document_list...title', 'search_target', 'search_keyword');
+
 		Context::set('module_srl', $module_srl);
 		$this->setTemplateFile('document_list');
 	}
@@ -367,6 +370,9 @@ class memberView extends member
 		Context::set('page', $output->page);
 		Context::set('document_list', $output->data);
 		Context::set('page_navigation', $output->page_navigation);
+
+		$security = new Security($output->data);
+		$security->encodeHTML('..nick_name');
 
 		$this->setTemplateFile('scrapped_list');
 	}

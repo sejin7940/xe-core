@@ -1,5 +1,6 @@
 <!-- css -->
 <load target="css/default.css" />
+<load target="../../../../common/xeicon/xeicon.min.css" />
 
 <!-- JS -->
 <!--%load_js_plugin("ckeditor")-->
@@ -9,7 +10,7 @@
 
 {@ $css_content = null }
 <!--@if($content_font || $content_font_size)-->
-	{@ $css_content = '.xe_content.editable p { margin: 0;'. chr(125); }
+	<!--@if($content_style === 'ckeditor_light')-->{@ $css_content = '.xe_content.editable p { margin: 0;'. chr(125); }<!--@endif-->
 
 	{@ $css_content .= ' .xe_content.editable { '}
 	<block cond="$content_font">
@@ -31,21 +32,25 @@
 <script>
 (function($){
 	"use strict";
-
 	// editor
 	$(function(){
+		<!--@if(!FileHandler::exists('common/js/plugins/ckeditor/ckeditor/config.js'))-->CKEDITOR.config.customConfig = '';<!--@endif-->
 		var settings = {
 			ckeconfig: {
 				height: '{$editor_height}',
 				skin: '{$colorset}',
 				contentsCss: '{$content_style_path}/editor.css',
 				xe_editor_sequence: {$editor_sequence},
-				toolbarCanCollapse: true
+				toolbarCanCollapse: true,
+				language: "{str_replace('jp','ja',$lang_type)}"
 			},
 			loadXeComponent: true,
 			enableToolbar: true,
 			content_field: jQuery('[name={$editor_content_key_name}]')
 		};
+
+		CKEDITOR.dtd.$removeEmpty.ins = 0;
+		CKEDITOR.dtd.$removeEmpty.i = 0;
 
 		<!--@if($enable_component)-->
 			{@ $xe_component = array(); }
@@ -66,14 +71,17 @@
 			settings.loadXeComponent = false;
 		<!--@endif-->
 
-		<!--@if($module_type === 'comment')-->
+		<!--@if($module_type === 'comment'||Mobile::isMobileCheckByAgent())-->
 			settings.ckeconfig.toolbarStartupExpanded = false;
+		<!--@endif-->
+		
+		<!--@if(!$html_mode)-->
+			settings.ckeconfig.removeButtons = 'Save,Preview,Print,Cut,Copy,Paste,Source';
 		<!--@endif-->
 
 		<!--@if($css_content)-->CKEDITOR.addCss('{$css_content}');<!--@end-->
 
 		var ckeApp = $('#ckeditor_instance_{$editor_sequence}').XeCkEditor(settings);
-
 	});
 })(jQuery);
 </script>

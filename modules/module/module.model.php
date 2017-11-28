@@ -77,7 +77,7 @@ class moduleModel extends module
 	}
 
 	/**
-	 * @brief Get the defaul mid according to the domain
+	 * @brief Get the default mid according to the domain
 	 */
 	function getDefaultMid()
 	{
@@ -97,12 +97,12 @@ class moduleModel extends module
 		$site_info = NULL;
 		if($default_url && $default_url_parse['host'] != $request_url_parse['host'])
 		{
-			$url_info = parse_url($request_url);
-			$hostname = $url_info['host'];
-			$path = $url_info['path'];
+			$hostname = $request_url_parse['host'];
+			$path = $request_url_parse['path'];
+			$port = $request_url_parse['port'];
 			if(strlen($path) >= 1 && substr_compare($path, '/', -1) === 0) $path = substr($path, 0, -1);
 
-			$domain = sprintf('%s%s%s', $hostname, $url_info['port']&&$url_info['port']!=80?':'.$url_info['port']:'',$path);
+			$domain = sprintf('%s%s%s', $hostname, $port && ($port != 80 )? ':'.$port  : '', $path);
 		}
 
 		if($domain === '')
@@ -934,6 +934,7 @@ class moduleModel extends module
 					$standalone = $action->attrs->standalone=='false'?'false':'true';
 					$ruleset = $action->attrs->ruleset?$action->attrs->ruleset:'';
 					$method = $action->attrs->method?$action->attrs->method:'';
+					$check_csrf = $action->attrs->check_csrf=='false'?'false':'true';
 
 					$index = $action->attrs->index;
 					$admin_index = $action->attrs->admin_index;
@@ -944,9 +945,10 @@ class moduleModel extends module
 					$info->action->{$name} = new stdClass();
 					$info->action->{$name}->type = $type;
 					$info->action->{$name}->grant = $grant;
-					$info->action->{$name}->standalone = ($standalone == 'true') ? TRUE : FALSE;
+					$info->action->{$name}->standalone = $standalone;
 					$info->action->{$name}->ruleset = $ruleset;
 					$info->action->{$name}->method = $method;
+					$info->action->{$name}->check_csrf = $check_csrf;
 					if($action->attrs->menu_name)
 					{
 						if($menu_index == 'true')
@@ -970,6 +972,7 @@ class moduleModel extends module
 					$buff[] = sprintf('$info->action->%s->standalone=\'%s\';', $name, $standalone);
 					$buff[] = sprintf('$info->action->%s->ruleset=\'%s\';', $name, $ruleset);
 					$buff[] = sprintf('$info->action->%s->method=\'%s\';', $name, $method);
+					$buff[] = sprintf('$info->action->%s->check_csrf=\'%s\';', $name, $check_csrf);
 
 					if($index=='true')
 					{

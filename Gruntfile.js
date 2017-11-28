@@ -2,7 +2,7 @@ module.exports = function(grunt) {
 	"use strict";
 
 	var banner = '/*! Copyright (C) NAVER <http://www.navercorp.com> */\n';
-	var banner_xe_js = banner + '/**!\n * @concat modernizr.js + common.js + js_app.js + xml_handler.js + xml_js_filter.js\n * @brief XE Common JavaScript\n **/\n';
+	var banner_xe_js = banner + '/**!\n * @concat modernizr.js + common.js + js_app.js + xml2json.js + xml_handler.js + xml_js_filter.js\n * @brief XE Common JavaScript\n **/\n';
 
 	grunt.file.defaultEncoding = 'utf8';
 
@@ -25,6 +25,7 @@ module.exports = function(grunt) {
 					'common/js/modernizr.js',
 					'common/js/common.js',
 					'common/js/js_app.js',
+					'common/js/xml2json.js',
 					'common/js/xml_handler.js',
 					'common/js/xml_js_filter.js'
 				],
@@ -112,7 +113,6 @@ module.exports = function(grunt) {
 			},
 			'layout': {
 				files: {
-					'layouts/xedition/js/jquery.easing.min.js': ['layouts/xedition/js/jquery.easing.js'],
 					'layouts/xedition/js/layout.min.js': ['layouts/xedition/js/layout.js'],
 					'layouts/xedition/js/welcome.min.js': ['layouts/xedition/js/welcome.js'],
 				}
@@ -148,7 +148,6 @@ module.exports = function(grunt) {
 			},
 			'layout': {
 				files: {
-					'layouts/xedition/css/camera.min.css': ['layouts/xedition/css/camera.css'],
 					'layouts/xedition/css/layout.min.css': ['layouts/xedition/css/layout.css'],
 					'layouts/xedition/css/webfont.min.css': ['layouts/xedition/css/webfont.css'],
 					'layouts/xedition/css/welcome.min.css': ['layouts/xedition/css/welcome.css'],
@@ -180,6 +179,7 @@ module.exports = function(grunt) {
 					'common/js/html5.js',
 					'common/js/x.js',
 					'common/js/xe.js',
+					'common/js/xml2json.js',
 					'common/js/modernizr.js',
 					'vendor/**',
 					'tests/**',
@@ -248,7 +248,7 @@ module.exports = function(grunt) {
 
 	grunt.registerTask('build', '', function(A, B) {
 		var _only_export = false;
-		var tasks = ['krzip', 'syndication'];
+		var tasks = ['krzip', 'syndication', 'seo'];
 
 		if(!A) {
 			grunt.fail.warn('Undefined build target.');
@@ -301,7 +301,17 @@ module.exports = function(grunt) {
 						grunt.file.delete('build/xe');
 						grunt.file.delete('build/temp.full.tar');
 
-						grunt.log.ok('Done!');
+						grunt.util.spawn({
+							cmd: "git",
+							args: ['diff', '--name-status', target]
+						}, function (error, result, code) {
+							var fs = require('fs');
+							result = 'Added (A), Copied (C), Deleted (D), Modified (M), Renamed (R).' + grunt.util.linefeed + result;
+							grunt.file.write(build_dir + '/CHANGED.' + version + '.txt', result);
+
+							grunt.log.ok('Done!');
+						});
+
 					});
 				});
 			}
@@ -384,6 +394,15 @@ module.exports = function(grunt) {
 					grunt.file.delete('build/xe/modules/syndication/.git');
 					taskDone();
 				});
+
+        // seo
+        grunt.util.spawn({
+          cmd: "git",
+          args: ['clone', '-b', 'master', 'git@github.com:xpressengine/xe-module-seo.git', 'build/xe/modules/seo']
+        }, function (error, result, code) {
+          grunt.file.delete('build/xe/modules/seo/.git');
+          taskDone();
+        });
 			});
 		});
 	});

@@ -103,7 +103,7 @@ class menuAdminController extends menu
 		$output->add('menuSrl', $args->menu_srl);
 		return $output;
 	}
-	
+
 	function linkAllModuleInstancesToSitemap()
 	{
 		$unlinked_modules = false;
@@ -114,7 +114,7 @@ class menuAdminController extends menu
 		{
 			$unlinked_modules = $output->data;
 		}
-		
+
 		if($unlinked_modules)
 		{
 			$unlinked_menu_srl = $this->getUnlinkedMenu();
@@ -122,7 +122,7 @@ class menuAdminController extends menu
 		}
 
 	}
-	
+
 	function getUnlinkedMenu()
 	{
 		// 'unlinked' menu 존재여부 확인
@@ -139,7 +139,7 @@ class menuAdminController extends menu
 				unset($moduleConfig->unlinked_menu_srl);
 			}
 		}
-		
+
 		if(!$moduleConfig->unlinked_menu_srl)
 		{
 			$output = $this->addMenu('unlinked', 0);
@@ -154,10 +154,10 @@ class menuAdminController extends menu
 				return false;
 			}
 		}
-		
+
 		return $moduleConfig->unlinked_menu_srl;
 	}
-	
+
 	/**
 	 * insert menu when not linked module.
 	 *
@@ -172,7 +172,7 @@ class menuAdminController extends menu
 		{
 			return new Object(-1, 'msg_invalid_request');
 		}
-	
+
 		foreach($moduleInfos as $moduleInfo)
 		{
 			// search menu.
@@ -180,9 +180,9 @@ class menuAdminController extends menu
 			$args->url = $moduleInfo->mid;
 			$args->site_srl = $moduleInfo->site_srl;
 			$args->is_shortcut = 'N';
-	
+
 			$output = executeQuery('menu.getMenuItemByUrl', $args);
-	
+
 			if($output->toBool() && $output->data)
 			{
 				$moduleInfo->menu_srl = $output->data->menu_srl;
@@ -195,7 +195,7 @@ class menuAdminController extends menu
 				$item_args->name = $moduleInfo->mid;
 				$item_args->menu_item_srl = getNextSequence();
 				$item_args->listorder = -1*$item_args->menu_item_srl;
-	
+
 				$output = executeQuery('menu.insertMenuItem', $item_args);
 				if(!$output->toBool())
 				{
@@ -203,9 +203,9 @@ class menuAdminController extends menu
 				}
 				$moduleInfo->menu_srl = $menuSrl;
 			}
-	
+
 			$output = executeQuery('module.updateModule', $moduleInfo);
-			
+
 			return $output;
 		}
 
@@ -214,14 +214,14 @@ class menuAdminController extends menu
 		{
 			$oCacheHandler->invalidateGroupKey('site_and_module');
 		}
-		
+
 		$oMenuAdminController = getAdminController('menu');
 		$oMenuAdminController->makeXmlFile($menuSrl);
-	
+
 		return new Object();
 	}
-	
-	
+
+
 
 	/**
 	 * Change the menu title
@@ -461,7 +461,6 @@ class menuAdminController extends menu
 			$args->parent_srl = $request->parent_srl;
 			$args->open_window = $request->menu_open_window;
 			$args->expand = $request->menu_expand;
-			$args->expand = $request->menu_expand;
 			$args->is_shortcut = $request->is_shortcut;
 			$args->url = $request->shortcut_target;
 
@@ -505,6 +504,9 @@ class menuAdminController extends menu
 			$args->url = '#';
 		}
 
+		if($request->menu_desc) $args->desc = $request->menu_desc;
+		else $args->desc = '';
+
 		$args->menu_item_srl = getNextSequence();
 		$args->listorder = -1*$args->menu_item_srl;
 		$output = executeQuery('menu.insertMenuItem', $args);
@@ -536,6 +538,9 @@ class menuAdminController extends menu
 
 		if($request->menu_name_key) $args->name = $request->menu_name_key;
 		else $args->name = $request->menu_name;
+
+		if($request->menu_desc) $args->desc = $request->menu_desc;
+		else $args->desc = '';
 
 		if($request->module_id && strncasecmp('http', $request->module_id, 4) === 0)
 		{
@@ -610,7 +615,7 @@ class menuAdminController extends menu
 		{
 			$cmArgs->use_mobile = 'Y';
 		}
-		
+
 		// if mid is empty, auto create mid
 		if(!$request->module_id)
 		{
@@ -720,13 +725,13 @@ class menuAdminController extends menu
 			$args->name = $request->menu_name;
 		}
 
-		if(count($args->group_srls) == 0)
-		{
-			unset($args->group_srls);
-		}
+		if($request->menu_desc) $args->desc = $request->menu_desc;
+		else $args->desc = '';
+
+		unset($args->group_srls);
 		$args->open_window = $request->menu_open_window;
 		$args->expand = $request->menu_expand;
-		$output = executeQuery('menu.updateMenuItem', $args);
+		$output = $this->_updateMenuItem($args);
 
 		$this->makeXmlFile($args->menu_srl);
 
@@ -784,7 +789,7 @@ class menuAdminController extends menu
 			$item_info->active_btn = '';
 		}
 
-		$output = executeQuery('menu.updateMenuItem', $item_info);
+		$output = $this->_updateMenuItem($item_info);
 
 		// recreate menu cache file
 		$this->makeXmlFile($args->menu_srl);
@@ -792,10 +797,17 @@ class menuAdminController extends menu
 
 	public function updateMenuItem($itemInfo)
 	{
-		$output = executeQuery('menu.updateMenuItem', $itemInfo);
+		$output = $this->_updateMenuItem($itemInfo);
 
 		// recreate menu cache file
 		$this->makeXmlFile($itemInfo->menu_srl);
+		return $output;
+	}
+
+	public function _updateMenuItem($itemInfo)
+	{
+		$output = executeQuery('menu.updateMenuItem', $itemInfo);
+
 		return $output;
 	}
 
@@ -955,7 +967,7 @@ class menuAdminController extends menu
 			{
 				$output->data->url = '';
 				$referenceItem = $output->data;
-				$output = executeQuery('menu.updateMenuItem', $referenceItem);
+				$output = $this->_updateMenuItem($referenceItem);
 				if(!$output->toBool())
 				{
 					$oDB->rollback();
@@ -1079,7 +1091,7 @@ class menuAdminController extends menu
 				$args = new stdClass();
 				$args->menu_srl = $menu_srl;
 				$args->menu_item_srl = $node['node_srl'];
-				$output = executeQuery('menu.updateMenuItemNode', $args);
+				$output = $this->_updateMenuItem($args);
 
 				//module's menu_srl move also
 				if($node['is_shortcut'] == 'N' && !empty($node['url']))
@@ -1243,7 +1255,7 @@ class menuAdminController extends menu
 				$update_item_info->normal_btn = $copied_info['normal_btn'];
 				$update_item_info->hover_btn = $copied_info['hover_btn'];
 				$update_item_info->active_btn = $copied_info['active_btn'];
-				executeQuery('menu.updateMenuItem', $update_item_info);
+				$output = $this->_updateMenuItem($update_item_info);
 			}
 			$this->insertedMenuItemSrlList[] = $insertedMenuItemSrl;
 		}
@@ -1623,7 +1635,7 @@ class menuAdminController extends menu
 		// Update if exists
 		if($item_info->menu_item_srl == $args->menu_item_srl)
 		{
-			$output = executeQuery('menu.updateMenuItem', $args);
+			$output = $this->_updateMenuItem($args);
 			if(!$output->toBool()) return $output;
 		}
 		// Insert if not exist
@@ -1674,7 +1686,7 @@ class menuAdminController extends menu
 			if($exposure) $args->group_srls = implode(',', $exposure);
 		}
 
-		$output = executeQuery('menu.updateMenuItem', $args);
+		$output = $this->_updateMenuItem($args);
 		if(!$output->toBool())
 		{
 			return $output;
@@ -1687,8 +1699,20 @@ class menuAdminController extends menu
 
 		$oModuleModel = getModel('module');
 		$moduleInfo = $oModuleModel->getModuleInfoByMid($itemInfo->url, $menuInfo->site_srl);
-
 		$xml_info = $oModuleModel->getModuleActionXML($moduleInfo->module);
+
+		if($itemInfo->is_shortcut === 'Y')
+		{
+			$moduleGrnatsArgs = new stdClass;
+			$moduleGrnatsArgs->module_srl = $moduleInfo->module_srl;
+			$output = executeQueryArray('module.getModuleGrants', $moduleGrnatsArgs);
+			if(!$output->data) $output->data = array();
+			$moduleGrnats = new stdClass();
+			foreach($output->data as $grant)
+			{
+				$moduleGrnats->{$grant->name}[] = $grant->group_srl;
+			}
+		}
 
 		$grantList = $xml_info->grant;
 		if(!$grantList) $grantList = new stdClass;
@@ -1698,29 +1722,30 @@ class menuAdminController extends menu
 		$grantList->manager = new stdClass();
 		$grantList->manager->default = 'manager';
 
-		$grant = new stdClass;
+		$grant = new stdClass();
 		foreach($grantList AS $grantName=>$grantInfo)
 		{
-			if(!$htPerm[$grantName])
+			if($htPerm[$grantName])
 			{
-				continue;
-			}
+				$htPerm[$grantName] = explode(',', $htPerm[$grantName]);
 
-			$htPerm[$grantName] = explode(',', $htPerm[$grantName]);
-
-			// users in a particular group
-			if(is_array($htPerm[$grantName]))
-			{
-				$grant->{$grantName} = $htPerm[$grantName];
-				continue;
+				// users in a particular group
+				if(is_array($htPerm[$grantName]))
+				{
+					$grant->{$grantName} = $htPerm[$grantName];
+					continue;
+				}
+				// -1 = Log-in user only, -2 = site members only, 0 = all users
+				else
+				{
+					$grant->{$grantName}[] = $htPerm[$grantName];
+					continue;
+				}
 			}
-			// -1 = Log-in user only, -2 = site members only, 0 = all users
-			else
+			else if($itemInfo->is_shortcut === 'Y')
 			{
-				$grant->{$grantName}[] = $htPerm[$grantName];
-				continue;
+				if(isset($moduleGrnats) && $moduleGrnats->{$grantName}) $grant->{$grantName} = $moduleGrnats->{$grantName};
 			}
-			$grant->{$group_srls} = array();
 		}
 
 		if(count($grant))
@@ -1880,6 +1905,7 @@ class menuAdminController extends menu
 			$name_str = sprintf('$_names = array(%s); print $_names[$lang_type];', $name_arr_str);
 
 			$url = str_replace(array('&','"','<','>'),array('&amp;','&quot;','&lt;','&gt;'),$node->url);
+			$desc = str_replace(array('&','"',"'"),array('&amp;','&quot;','\\\''),$node->desc);
 			if(preg_match('/^([0-9a-zA-Z\_\-]+)$/', $node->url))
 			{
 				$href = "getSiteUrl('$domain', '','mid','$node->url')";
@@ -1915,7 +1941,7 @@ class menuAdminController extends menu
 			if($group_srls)$group_check_code = sprintf('($is_admin==true||(is_array($group_srls)&&count(array_intersect($group_srls, array(%s))))||($is_logged&&%s))',$group_srls,$group_srls == -1?1:0);
 			else $group_check_code = "true";
 			$attribute = sprintf(
-				'node_srl="%s" parent_srl="%s" menu_name_key=\'%s\' text="<?php if(%s) { %s }?>" url="<?php print(%s?"%s":"")?>" href="<?php print(%s?%s:"")?>" is_shortcut="%s" open_window="%s" expand="%s" normal_btn="%s" hover_btn="%s" active_btn="%s" link="<?php if(%s) {?>%s<?php }?>"',
+				'node_srl="%s" parent_srl="%s" menu_name_key=\'%s\' text="<?php if(%s) { %s }?>" url="<?php print(%s?"%s":"")?>" href="<?php print(%s?%s:"")?>" is_shortcut="%s" desc="%s" open_window="%s" expand="%s" normal_btn="%s" hover_btn="%s" active_btn="%s" link="<?php if(%s) {?>%s<?php }?>"',
 				$menu_item_srl,
 				$node->parent_srl,
 				addslashes($node->name),
@@ -1926,6 +1952,7 @@ class menuAdminController extends menu
 				$group_check_code,
 				$href,
 				$is_shortcut,
+				$desc,
 				$open_window,
 				$expand,
 				$normal_btn,
@@ -1964,23 +1991,34 @@ class menuAdminController extends menu
 			// Get data from child nodes if exist.
 			if($menu_item_srl&&$tree[$menu_item_srl]) $child_output = $this->getPhpCacheCode($tree[$menu_item_srl], $tree, $site_srl, $domain);
 			else $child_output = array("buff"=>"", "url_list"=>array());
+
 			// List variables
 			$names = $oMenuAdminModel->getMenuItemNames($node->name, $site_srl);
 			unset($name_arr_str);
 			foreach($names as $key => $val)
 			{
-				$name_arr_str .= sprintf('"%s"=>"%s",',$key, str_replace(array('\\','"'),array('\\\\','&quot;'),$val));
+				if(preg_match('/\{\$lang->menu_gnb(?:_sub)?\[\'([a-zA-Z_]+)\'\]\}/', $val) === 1)
+				{
+					$name_arr_str .= sprintf('"%s"=>"%s",', $key, $val);
+				}
+				else
+				{
+					$name_arr_str .= sprintf('"%s"=>\'%s\',', $key, str_replace(array('\\','\''), array('\\\\','\\\''), removeHackTag($val)));
+				}
 			}
 			$name_str = sprintf('$_menu_names[%d] = array(%s); %s', $node->menu_item_srl, $name_arr_str, $child_output['name']);
+
 			// If url value is not empty in the current node, put the value into an array url_list
 			if($node->url) $child_output['url_list'][] = $node->url;
 			$output['url_list'] = array_merge($output['url_list'], $child_output['url_list']);
 			// If node->group_srls value exists
 			if($node->group_srls)$group_check_code = sprintf('($is_admin==true||(is_array($group_srls)&&count(array_intersect($group_srls, array(%s))))||($is_logged && %s))',$node->group_srls,$node->group_srls == -1?1:0);
 			else $group_check_code = "true";
+
 			// List variables
 			$href = str_replace(array('&','"','<','>'),array('&amp;','&quot;','&lt;','&gt;'),$node->href);
 			$url = str_replace(array('&','"','<','>'),array('&amp;','&quot;','&lt;','&gt;'),$node->url);
+			$desc = str_replace(array('&','"',"'"),array('&amp;','&quot;','\\\''),$node->desc);
 			if(preg_match('/^([0-9a-zA-Z\_\-]+)$/i', $node->url))
 			{
 				$href = "getSiteUrl('$domain', '','mid','$node->url')";
@@ -2030,7 +2068,7 @@ class menuAdminController extends menu
 			}
 			// Create properties (check if it belongs to the menu node by url_list. It looks a trick but fast and powerful)
 			$attribute = sprintf(
-				'"node_srl"=>"%s","parent_srl"=>"%s","menu_name_key"=>\'%s\',"isShow"=>(%s?true:false),"text"=>(%s?$_menu_names[%d][$lang_type]:""),"href"=>(%s?%s:""),"url"=>(%s?"%s":""),"is_shortcut"=>"%s","open_window"=>"%s","normal_btn"=>"%s","hover_btn"=>"%s","active_btn"=>"%s","selected"=>(array(%s)&&in_array(Context::get("mid"),array(%s))?1:0),"expand"=>"%s", "list"=>array(%s),  "link"=>(%s? ( array(%s)&&in_array(Context::get("mid"),array(%s)) ?%s:%s):""),',
+				'"node_srl" => %d, "parent_srl" => %d, "menu_name_key" => \'%s\', "isShow" => (%s ? true : false), "text" => (%s ? $_menu_names[%d][$lang_type] : ""), "href" => (%s ? %s : ""), "url" => (%s ? "%s" : ""), "is_shortcut" => "%s", "desc" => \'%s\', "open_window" => "%s", "normal_btn" => "%s", "hover_btn" => "%s", "active_btn" => "%s", "selected" => (array(%s) && in_array(Context::get("mid"), array(%s)) ? 1 : 0), "expand" => \'%s\', "list" => array(%s), "link" => (%s ? (array(%s) && in_array(Context::get("mid"), array(%s)) ? %s : %s) : ""),',
 				$node->menu_item_srl,
 				$node->parent_srl,
 				addslashes($node->name),
@@ -2042,6 +2080,7 @@ class menuAdminController extends menu
 				$group_check_code,
 				$url,
 				$is_shortcut,
+				$desc,
 				$open_window,
 				$normal_btn,
 				$hover_btn,

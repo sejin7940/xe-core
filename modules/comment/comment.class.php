@@ -36,6 +36,11 @@ class comment extends ModuleObject
 		// 2008. 02. 22 add comment setting when a new module added
 		$oModuleController->insertTrigger('module.dispAdditionSetup', 'comment', 'view', 'triggerDispCommentAdditionSetup', 'before');
 
+		if(!is_dir('./files/cache/tmp'))
+		{
+			FileHandler::makeDir('./files/cache/tmp');
+		}
+
 		return new Object();
 	}
 
@@ -97,6 +102,11 @@ class comment extends ModuleObject
 
 		// 2012. 08. 29 Add a trigger to copy additional setting when the module is copied 
 		if(!$oModuleModel->getTrigger('module.procModuleAdminCopyModule', 'comment', 'controller', 'triggerCopyModule', 'after'))
+		{
+			return TRUE;
+		}
+
+		if(!$oDB->isIndexExists("comments", "idx_parent_srl"))
 		{
 			return TRUE;
 		}
@@ -175,6 +185,11 @@ class comment extends ModuleObject
 			$oModuleController->insertTrigger('module.procModuleAdminCopyModule', 'comment', 'controller', 'triggerCopyModule', 'after');
 		}
 
+		if(!$oDB->isIndexExists("comments", "idx_parent_srl"))
+		{
+			$oDB->addIndex('comments', 'idx_parent_srl', array('parent_srl'));
+		}
+
 		return new Object(0, 'success_updated');
 	}
 
@@ -184,7 +199,10 @@ class comment extends ModuleObject
 	 */
 	function recompileCache()
 	{
-		
+		if(!is_dir('./files/cache/tmp'))
+		{
+			FileHandler::makeDir('./files/cache/tmp');
+		}
 	}
 
 }

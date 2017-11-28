@@ -20,10 +20,10 @@ class DBMysql_innodb extends DBMysql
 	 * Constructor
 	 * @return void
 	 */
-	function DBMysql_innodb()
+	function DBMysql_innodb($auto_connect = TRUE)
 	{
 		$this->_setDBInfo();
-		$this->_connect();
+		if($auto_connect) $this->_connect();
 	}
 
 	/**
@@ -51,7 +51,7 @@ class DBMysql_innodb extends DBMysql
 	 * this method is private
 	 * @return boolean
 	 */
-	function _begin($transactionLevel)
+	function _begin($transactionLevel = 0)
 	{
 		$connection = $this->_getConnection('master');
 
@@ -71,7 +71,7 @@ class DBMysql_innodb extends DBMysql
 	 * this method is private
 	 * @return boolean
 	 */
-	function _rollback($transactionLevel)
+	function _rollback($transactionLevel = 0)
 	{
 		$connection = $this->_getConnection('master');
 

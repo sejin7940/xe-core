@@ -1,40 +1,6 @@
 <?php
 /* Copyright (C) NAVER <http://www.navercorp.com> */
 
-if(!defined('__XE_LOADED_DB_CLASS__'))
-{
-	define('__XE_LOADED_DB_CLASS__', 1);
-
-	require(_XE_PATH_ . 'classes/xml/xmlquery/DBParser.class.php');
-	require(_XE_PATH_ . 'classes/xml/xmlquery/QueryParser.class.php');
-	require(_XE_PATH_ . 'classes/xml/xmlquery/argument/Argument.class.php');
-	require(_XE_PATH_ . 'classes/xml/xmlquery/argument/SortArgument.class.php');
-	require(_XE_PATH_ . 'classes/xml/xmlquery/argument/ConditionArgument.class.php');
-
-	require(_XE_PATH_ . 'classes/db/queryparts/expression/Expression.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/expression/SelectExpression.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/expression/InsertExpression.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/expression/UpdateExpression.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/expression/UpdateExpressionWithoutArgument.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/expression/ClickCountExpression.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/table/Table.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/table/JoinTable.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/table/CubridTableWithHint.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/table/MysqlTableWithHint.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/table/MssqlTableWithHint.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/table/IndexHint.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/condition/ConditionGroup.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/condition/Condition.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/condition/ConditionWithArgument.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/condition/ConditionWithoutArgument.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/condition/ConditionSubquery.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/expression/StarExpression.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/order/OrderByColumn.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/limit/Limit.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/Query.class.php');
-	require(_XE_PATH_ . 'classes/db/queryparts/Subquery.class.php');
-}
-
 /**
  * - DB parent class
  * - usage of db in XE is via xml
@@ -142,7 +108,7 @@ class DB
 	 * will be written by classes/DB/DB***.class.php
 	 * @var array
 	 */
-	var $supported_list = array();
+	static $supported_list = array();
 
 	/**
 	 * location of query cache
@@ -173,7 +139,7 @@ class DB
 	 * @param string $db_type type of db
 	 * @return DB return DB object instance
 	 */
-	function &getInstance($db_type = NULL)
+	function getInstance($db_type = NULL)
 	{
 		if(!$db_type)
 		{
@@ -242,18 +208,18 @@ class DB
 	 * this list return by child class
 	 * @return array return enable DBMS list in supported dbms list
 	 */
-	function getEnableList()
+	public static function getEnableList()
 	{
-		if(!$this->supported_list)
+		if(!self::$supported_list)
 		{
 			$oDB = new DB();
-			$this->supported_list = $oDB->_getSupportedList();
+			self::$supported_list = $oDB->_getSupportedList();
 		}
 
 		$enableList = array();
-		if(is_array($this->supported_list))
+		if(is_array(self::$supported_list))
 		{
-			foreach($this->supported_list AS $key => $value)
+			foreach(self::$supported_list AS $key => $value)
 			{
 				if($value->enable)
 				{
@@ -269,18 +235,18 @@ class DB
 	 * this list return by child class
 	 * @return array return disable DBMS list in supported dbms list
 	 */
-	function getDisableList()
+	public static function getDisableList()
 	{
-		if(!$this->supported_list)
+		if(!self::$supported_list)
 		{
 			$oDB = new DB();
-			$this->supported_list = $oDB->_getSupportedList();
+			self::$supported_list = $oDB->_getSupportedList();
 		}
 
 		$disableList = array();
-		if(is_array($this->supported_list))
+		if(is_array(self::$supported_list))
 		{
-			foreach($this->supported_list AS $key => $value)
+			foreach(self::$supported_list AS $key => $value)
 			{
 				if(!$value->enable)
 				{
@@ -301,8 +267,8 @@ class DB
 		static $get_supported_list = '';
 		if(is_array($get_supported_list))
 		{
-			$this->supported_list = $get_supported_list;
-			return $this->supported_list;
+			self::$supported_list = $get_supported_list;
+			return self::$supported_list;
 		}
 		$get_supported_list = array();
 		$db_classes_path = _XE_PATH_ . "classes/db/";
@@ -323,8 +289,7 @@ class DB
 
 			unset($oDB);
 			require_once($class_file);
-			$tmp_fn = create_function('', "return new {$class_name}();");
-			$oDB = $tmp_fn();
+			$oDB = new $class_name(FALSE);
 
 			if(!$oDB)
 			{
@@ -341,8 +306,8 @@ class DB
 		// sort
 		@usort($get_supported_list, array($this, '_sortDBMS'));
 
-		$this->supported_list = $get_supported_list;
-		return $this->supported_list;
+		self::$supported_list = $get_supported_list;
+		return self::$supported_list;
 	}
 
 	/**
@@ -622,7 +587,6 @@ class DB
 		// if there is no cache file or is not new, find original xml query file and parse it
 		if($cache_time < filemtime($xml_file) || $cache_time < filemtime(_XE_PATH_ . 'classes/db/DB.class.php') || $cache_time < filemtime(_XE_PATH_ . 'classes/xml/XmlQueryParser.class.php'))
 		{
-			require_once(_XE_PATH_ . 'classes/xml/XmlQueryParser.class.php');
 			$oParser = new XmlQueryParser();
 			$oParser->parse($query_id, $xml_file, $cache_file);
 		}
@@ -1121,7 +1085,7 @@ class DB
 	 * this method is protected
 	 * @return boolean
 	 */
-	function _begin()
+	function _begin($transactionLevel = 0)
 	{
 		return TRUE;
 	}
@@ -1149,7 +1113,7 @@ class DB
 	 * this method is protected
 	 * @return boolean
 	 */
-	function _rollback()
+	function _rollback($transactionLevel = 0)
 	{
 		return TRUE;
 	}
@@ -1378,7 +1342,7 @@ class DB
 	 * @param boolean $force force load DBParser instance
 	 * @return DBParser
 	 */
-	function &getParser($force = FALSE)
+	function getParser($force = FALSE)
 	{
 		static $dbParser = NULL;
 		if(!$dbParser || $force)

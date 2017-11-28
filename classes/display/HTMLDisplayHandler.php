@@ -60,6 +60,10 @@ class HTMLDisplayHandler
 
 		$output = $oTemplate->compile($template_path, $tpl_file);
 
+		// SECISSUE https://github.com/xpressengine/xe-core/issues/1583
+		$oSecurity = new Security();
+		$oSecurity->encodeHTML('is_keyword', 'search_keyword', 'search_target', 'order_target', 'order_type');
+
 		// add .x div for adminitration pages
 		if(Context::getResponseMethod() == 'HTML')
 		{
@@ -161,7 +165,7 @@ class HTMLDisplayHandler
 		$output = preg_replace_callback('!<style(.*?)>(.*?)<\/style>!is', array($this, '_moveStyleToHeader'), $output);
 
 		// move <link ..></link> in body to the header
-		$output = preg_replace_callback('!<link(.*?)/>!is', array($this, '_moveLinkToHeader'), $output);
+		$output = preg_replace_callback('!<link(.*?)/?>!is', array($this, '_moveLinkToHeader'), $output);
 
 		// move <meta ../> in body to the header
 		$output = preg_replace_callback('!<meta(.*?)(?:\/|)>!is', array($this, '_moveMetaToHeader'), $output);
@@ -395,6 +399,7 @@ class HTMLDisplayHandler
 			$oContext->loadFile(array('./common/js/x.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/common.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/js_app.js', 'head', '', -100000), true);
+			$oContext->loadFile(array('./common/js/xml2json.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/xml_handler.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/xml_js_filter.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/css/xe.css', '', '', -1000000), true);
@@ -450,6 +455,7 @@ class HTMLDisplayHandler
 			$oContext->loadFile(array('./common/js/x.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/common.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/js_app.js', 'head', '', -100000), true);
+			$oContext->loadFile(array('./common/js/xml2json.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/xml_handler.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/js/xml_js_filter.js', 'head', '', -100000), true);
 			$oContext->loadFile(array('./common/css/xe.css', '', '', -1000000), true);

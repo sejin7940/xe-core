@@ -74,7 +74,7 @@ class boardView extends board
 		 * check the consultation function, if the user is admin then swich off consultation function
 		 * if the user is not logged, then disppear write document/write comment./ view document
 		 **/
-		if($this->module_info->consultation == 'Y' && !$this->grant->manager)
+		if($this->module_info->consultation == 'Y' && !$this->grant->manager && !$this->grant->consultation_read)
 		{
 			$this->consultation = TRUE;
 			if(!Context::get('is_logged'))
@@ -405,6 +405,7 @@ class boardView extends board
 		$oDocumentModel = getModel('document');
 		$document_srl = Context::get('document_srl');
 		$oDocument = $oDocumentModel->getDocument($document_srl);
+		Context::set('oDocument', $oDocument);
 		Context::set('file_list',$oDocument->getUploadedFiles());
 
 		$oSecurity = new Security();
@@ -788,7 +789,7 @@ class boardView extends board
 		}
 
 		// if the document is not existed, then back to the board content page
-		if(!$oDocument->isExists())
+		if(!$oDocument || !$oDocument->isExists())
 		{
 			return $this->dispBoardContent();
 		}
