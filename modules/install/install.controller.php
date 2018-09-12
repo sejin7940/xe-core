@@ -17,9 +17,9 @@ class installController extends install
 	function init()
 	{
 		// Error occurs if already installed
-		if(Context::isInstalled())
+		if($this->act !== 'procInstallLicenseAggrement' && Context::isInstalled())
 		{
-			return new Object(-1, 'msg_already_installed');
+			$this->stop('msg_already_installed');
 		}
 
 		$this->db_tmp_config_file = _XE_PATH_.'files/config/tmpDB.config.php';
@@ -231,6 +231,19 @@ class installController extends install
 		$db_info->use_rewrite = Context::get('use_rewrite');
 		$db_info->time_zone = Context::get('time_zone');
 
+		if($_SERVER['HTTPS'] == 'on')
+		{
+			$https_port = (Context::get('https_port')) ? Context::get('https_port') : $_SERVER['SERVER_PORT'];
+			$https_port = (!$https_port != 443) ? $https_port : null;
+		}
+		else
+		{
+			$http_port = (Context::get('http_port')) ? Context::get('http_port') : $_SERVER['SERVER_PORT'];
+			$http_port = (!$http_port != 80) ? $http_port : null;
+		}
+		if($http_port) $db_info->http_port = $http_port;
+		if($https_port) $db_info->https_port = $https_port;
+
 		return $db_info;
 	}
 
@@ -260,7 +273,7 @@ class installController extends install
 
 			require_once(_XE_PATH_.'libs/ftp.class.php');
 			$oFtp = new ftp();
-			if(!$oFtp->ftp_connect($ftp_info->ftp_host, $ftp_info->ftp_port)) return new Object(-1, sprintf(Context::getLang('msg_ftp_not_connected'), $ftp_info->ftp_host));
+			if(!$oFtp->ftp_connect($ftp_info->ftp_host, $ftp_info->ftp_port)) return new Object(-1, sprintf(Context::getLang('msg_ftp_not_connected'), 'host'));
 
 			if(!$oFtp->ftp_login($ftp_info->ftp_user, $ftp_info->ftp_password))
 			{
